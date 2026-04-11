@@ -1,0 +1,33 @@
+{
+  // Enable the Flat Config engine (Required for ESLint 9+)
+  "eslint.useFlatConfig": true,
+
+  // Run ESLint on save for all relevant file types
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "always"
+  },
+
+  // Ensure ESLint extension validates these specific languages
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact",
+    "html",
+    "markdown"
+  ],
+
+  // Specific Tailwind CSS settings for Shadcn/UI
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*)\"['`]"],
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*)\"['`]"]
+  ],
+
+  // Disable default formatters to let ESLint handle logic
+  "[typescript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  }
+}

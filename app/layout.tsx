@@ -3,7 +3,7 @@ import localFont from 'next/font/local';
 
 import './globals.css';
 import ThemeProvider from '@/context/Theme';
-import Navbar from '@/components/navigation/navbar';
+import { Toaster } from '@/components/ui/sonner';
 
 const inter = localFont({
   src: '../public/fonts/Inter.ttf',
@@ -28,28 +28,37 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+const RootLayout = async ({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>) {
+}>) => {
   return (
     <html
-      lang="en"
+      lang='en'
       className={`${inter.variable} ${inter.className} ${spaceGrotesk.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className='min-h-full flex flex-col'>
         <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
+          attribute='class'
+          defaultTheme='system'
           enableSystem
           disableTransitionOnChange
         >
-          <Navbar />
           {children}
         </ThemeProvider>
+        <Toaster
+          position='top-center'
+          toastOptions={{
+            classNames: {
+              error: 'bg-red-600! text-white!',
+            },
+          }}
+        />
       </body>
     </html>
   );
-}
+};
+
+export default RootLayout;

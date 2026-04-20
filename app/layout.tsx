@@ -39,6 +39,13 @@ const RootLayout = async ({
       className={`${inter.variable} ${inter.className} ${spaceGrotesk.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <link
+          rel='stylesheet'
+          type='text/css'
+          href='https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css'
+        />
+      </head>
       <body className='min-h-full flex flex-col'>
         <ThemeProvider
           attribute='class'

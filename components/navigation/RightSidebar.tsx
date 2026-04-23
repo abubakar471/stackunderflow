@@ -18,7 +18,7 @@ const hotQuestions = [
     title: 'How to use Redux?',
   },
   {
-    _id: '1',
+    _id: '4',
     title: 'How to use React Router?',
   },
   {
@@ -57,11 +57,11 @@ const popularTags = [
 
 const RightSidebar = () => {
   return (
-    <section className='pt-36 custom-scrollbar background-light900_dark200 light-border sticky top-0 right-0 flex h-screen w-[350px] flex-col gap-6 overflow-y-auto border-l p-6 shadow-light-300 dark:shadow-none max-xl:hidden'>
+    <section className='pt-36 custom-scrollbar background-light900_dark200 light-border sticky top-0 right-0 flex h-screen w-87.5 flex-col gap-6 overflow-y-auto border-l p-6 shadow-light-300 dark:shadow-none max-xl:hidden'>
       <div>
         <h3 className='h3-bold text-dark200_light900'>Top Questions</h3>
 
-        <div className='mt-7 flex w-full flex-col gap-[30px]'>
+        <div className='mt-7 flex w-full flex-col gap-7.5'>
           {hotQuestions.map(({ _id, title }) => (
             <Link
               key={_id}

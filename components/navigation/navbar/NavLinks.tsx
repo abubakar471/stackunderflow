@@ -32,7 +32,7 @@ const NavLinks = ({ isMobileNav = false }: { isMobileNav: boolean }) => {
             href={item.route}
             className={cn(
               isActive ? 'primary-gradient rounded-lg text-light-900' : 'text-dark300_light900',
-              'flex items-center justify-start gap-4 bg-transparent p-4'
+              'flex items-center justify-center lg:justify-start gap-4 bg-transparent p-3'
             )}
           >
             <Image
@@ -42,12 +42,7 @@ const NavLinks = ({ isMobileNav = false }: { isMobileNav: boolean }) => {
               height={20}
               className={cn({ 'invert-colors': !isActive })}
             />
-            <p
-              className={cn(
-                isActive ? 'base-bold' : 'base-medium',
-                !isMobileNav && 'max-lg:hidden'
-              )}
-            >
+            <p className={cn(isActive ? 'semibold' : '', !isMobileNav && 'max-lg:hidden')}>
               {item.label}
             </p>
           </Link>

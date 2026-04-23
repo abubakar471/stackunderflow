@@ -1,9 +1,75 @@
+import HomeFilter from '@/components/filters/HomeFilter';
 import LocalSearch from '@/components/search/LocalSearch';
 import { Button } from '@/components/ui/button';
 import ROUTES from '@/constants/routes';
 import Link from 'next/link';
 
-const Home = async () => {
+const questions = [
+  {
+    _id: '1',
+    title: 'How to learn React?',
+    description: 'I want to learn React JS, what is the best way to learn?',
+    tags: [
+      {
+        _id: '1',
+        name: 'React',
+      },
+      {
+        _id: '2',
+        name: 'JavaScript',
+      },
+    ],
+    author: {
+      _id: '1',
+      name: 'John Doe',
+    },
+    upvotes: 10,
+    answers: 5,
+    view: 100,
+    createdAt: new Date(),
+  },
+  {
+    _id: '2',
+    title: 'How to learn JavaScript?',
+    description: 'I want to learn JS, what is the best way to learn?',
+    tags: [
+      {
+        _id: '2',
+        name: 'JavaScript',
+      },
+      {
+        _id: '2',
+        name: 'JS',
+      },
+    ],
+    author: {
+      _id: '1',
+      name: 'John Doe',
+    },
+    upvotes: 10,
+    answers: 5,
+    view: 100,
+    createdAt: new Date(),
+  },
+];
+
+interface SearchParams {
+  searchParams: Promise<{ [key: string]: string }>;
+}
+
+const Home = async ({ searchParams }: SearchParams) => {
+  const { query = '', filter = '' } = await searchParams;
+
+  const filteredQuestions = questions.filter((question) => {
+    const matchesQuery = question.title.toLowerCase().includes(query.toLowerCase());
+
+    const matchesFilter = filter
+      ? question.tags[0].name.toLowerCase() === filter.toLowerCase()
+      : true;
+
+    return matchesQuery && matchesFilter;
+  });
+
   return (
     <>
       <section className='flex flex-col-reverse w-full sm:flex-row justify-between gap-4 sm:items-center'>
@@ -21,9 +87,13 @@ const Home = async () => {
           route='/'
         />
       </section>
-      Home filters
+
+      <HomeFilter />
+
       <div className='mt-10 flex w-full flex-col gap-6'>
-        <p>Question card 1</p>
+        {filteredQuestions.map((question) => (
+          <h1 key={question._id}>{question.title}</h1>
+        ))}
       </div>
     </>
   );

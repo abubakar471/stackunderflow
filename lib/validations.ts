@@ -35,19 +35,37 @@ export const SignUpSchema = z.object({
     .email({ message: 'Please provide a valid email address' }),
 
   password: z
-  .string()
-  .min(6, { message: 'Password must be at least 6 characters long' })
-  .max(100, {message : "Password can not exceed 100 characters"})
-  .regex(/[A-Z]/,{
-    message : "Password must contain at least one uppercase letter"
-  })
-  .regex(/[a-z]/,{
-    message : "Password must contain at least one lowercase letter"
-  })
-  .regex(/[0-9]/,{
-    message : "Password must contain at least one number"
-  })
-  .regex(/[^a-zA-Z0-9]/,{
-    message : "Password must contain at least one special character"
-  })
+    .string()
+    .min(6, { message: 'Password must be at least 6 characters long' })
+    .max(100, { message: 'Password can not exceed 100 characters' })
+    .regex(/[A-Z]/, {
+      message: 'Password must contain at least one uppercase letter',
+    })
+    .regex(/[a-z]/, {
+      message: 'Password must contain at least one lowercase letter',
+    })
+    .regex(/[0-9]/, {
+      message: 'Password must contain at least one number',
+    })
+    .regex(/[^a-zA-Z0-9]/, {
+      message: 'Password must contain at least one special character',
+    }),
+});
+
+export const AskQuestionSchema = z.object({
+  title: z
+    .string()
+    .min(1, { message: 'Title is required' })
+    .max(100, { message: 'Title can not exceed 100 characters' }),
+
+  content: z.string().min(1, { message: 'Body is required' }),
+  tags: z
+    .array(
+      z
+        .string()
+        .min(1, { message: 'Tag is required' })
+        .max(30, { message: 'Tag can not exceed 30 characters' })
+    )
+    .min(1, { message: 'At least one tag is required' })
+    .max(3, {message : "Can not add more than 3 tags"}),
 });

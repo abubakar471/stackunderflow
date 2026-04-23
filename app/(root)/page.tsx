@@ -36,7 +36,7 @@ const questions = [
     description: 'I want to learn JS, what is the best way to learn?',
     tags: [
       {
-        _id: '2',
+        _id: '1',
         name: 'JavaScript',
       },
       {

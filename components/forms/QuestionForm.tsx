@@ -2,13 +2,21 @@
 
 import { AskQuestionSchema } from '@/lib/validations';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React from 'react';
+import React, {useRef} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
+import { MDXEditorMethods } from '@mdxeditor/editor';
+import dynamic from 'next/dynamic';
+
+const Editor = dynamic(() => import("../editor"), {
+    ssr : false
+})
 
 const QuestionForm = () => {
+    const editorRef = useRef<MDXEditorMethods>(null);
+
   const form = useForm({
     resolver: zodResolver(AskQuestionSchema),
     defaultValues: {
@@ -66,7 +74,9 @@ const QuestionForm = () => {
               >
                 Detailed Explanation of your content <span className='text-primary-500'>*</span>
               </FieldLabel>
-              Editor
+
+              <Editor value={field.value} fieldChange={field.onChange} editorRef={editorRef} />
+
               <FieldDescription className='body-regular text-light-500 mt-2.5'>
                 Introduce the problem and expand on what you have put on the title
               </FieldDescription>

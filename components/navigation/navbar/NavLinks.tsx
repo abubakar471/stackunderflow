@@ -32,7 +32,7 @@ const NavLinks = ({ isMobileNav = false }: { isMobileNav: boolean }) => {
             href={item.route}
             className={cn(
               isActive ? 'primary-gradient rounded-lg text-light-900' : 'text-dark300_light900',
-              'flex items-center justify-center lg:justify-start gap-4 bg-transparent p-3'
+              'flex items-center justify-start sm:justify-center lg:justify-start gap-4 bg-transparent p-3'
             )}
           >
             <Image

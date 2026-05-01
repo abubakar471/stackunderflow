@@ -23,7 +23,8 @@ const questions = [
     author: {
       _id: '1',
       name: 'John Doe',
-      image : 'https://static1.personalitydatabase.net/2/pdb-images-prod/6f9ac7d4/profile_images/94feb725f56844778996862922587c56.png'
+      image:
+        'https://static1.personalitydatabase.net/2/pdb-images-prod/6f9ac7d4/profile_images/94feb725f56844778996862922587c56.png',
     },
     upvotes: 10,
     answers: 5,
@@ -47,7 +48,8 @@ const questions = [
     author: {
       _id: '1',
       name: 'John Doe',
-      image : 'https://static1.personalitydatabase.net/2/pdb-images-prod/6f9ac7d4/profile_images/94feb725f56844778996862922587c56.png'
+      image:
+        'https://static1.personalitydatabase.net/2/pdb-images-prod/6f9ac7d4/profile_images/94feb725f56844778996862922587c56.png',
     },
     upvotes: 10,
     answers: 5,

@@ -14,7 +14,7 @@ export interface IUser{
     reputation?: number;
 }
 
-const UserSchema = new Schema({
+const UserSchema = new Schema<IUser>({
     name : {
         type : String,
         required : true
@@ -50,6 +50,6 @@ const UserSchema = new Schema({
 })
 
 // models?.user checks if a User model is already created then use that, otherwise if User model doesn't exists create a new one
-const User = models?.user || model<IUser>("User", UserSchema);
+const User = models?.User || model<IUser>("User", UserSchema);
 
 export default User

@@ -1,7 +1,7 @@
 import { model, models, Schema } from "mongoose"
 
 /* 
-    we are creating this interface IUser (interface user) so that we can properly handle types in the components in frontend where this user model will be used, so the frontend will know exactly what property the User model has
+    we are creating this interface IUser (interface user) so that we can properly handle types in the user model, so the model will know what exactly fields a user model should have, so this schema is only for backend and the zod UserSchema defined in the global.d.ts file is the schema for the frontend
 */
 export interface IUser{
     name : string;

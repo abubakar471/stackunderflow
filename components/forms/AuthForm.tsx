@@ -17,11 +17,14 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import ROUTES from '@/constants/routes';
+import { ActionResponse } from '@/types/global';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface AuthFormProps<T extends FieldValues> {
   schema: z.ZodType<T, T>;
   defaultValues: T;
-  onSubmit: (data: T) => Promise<{ success: boolean }>;
+  onSubmit: (data: T) => Promise<ActionResponse>;
   formType: 'SIGN_UP' | 'SIGN_IN';
 }
 
@@ -31,13 +34,25 @@ const AuthForm = <T extends FieldValues>({
   formType,
   onSubmit,
 }: AuthFormProps<T>) => {
+  const router = useRouter();
+
   const form = useForm<T>({
     resolver: zodResolver(schema),
     defaultValues: defaultValues as DefaultValues<T>,
   });
 
   const handleSubmit: SubmitHandler<T> = async (data) => {
-    await onSubmit(data);
+    console.log("sign up data: ", data)
+    const result = ( await onSubmit(data)) as ActionResponse;
+
+    if(result?.success) {
+      toast.success(formType === 'SIGN_IN' ? 'Signed in successfully!' : 'Signed up successfully!');
+      
+      router.push(ROUTES.HOME);
+    } else{
+      toast.error(result?.error?.message);
+    }
+
   };
 
   const buttonText = formType === 'SIGN_IN' ? 'Sign in' : 'Sign up';

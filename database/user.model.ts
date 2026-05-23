@@ -1,4 +1,4 @@
-import { model, models, Schema } from "mongoose"
+import { model, models, Schema, type HydratedDocument } from "mongoose"
 
 /* 
     we are creating this interface IUser (interface user) so that we can properly handle types in the user model, so the model will know what exactly fields a user model should have, so this schema is only for backend and the zod UserSchema defined in the global.d.ts file is the schema for the frontend
@@ -8,11 +8,14 @@ export interface IUser{
     username : string;
     email : string;
     bio?: string;
-    image : string;
+    image? : string;
     location?: string;
     portfolio?: string;
     reputation?: number;
 }
+
+
+export type IUserDoc = HydratedDocument<IUser>
 
 const UserSchema = new Schema<IUser>({
     name : {
@@ -32,8 +35,7 @@ const UserSchema = new Schema<IUser>({
         type : String
     },
     image : {
-        type : String,
-        required : true
+        type : String
     },
     location : {
         type : String

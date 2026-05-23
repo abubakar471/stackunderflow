@@ -79,7 +79,7 @@ export const UserSchema = z.object({
   bio: z.string().optional(),
   image: z.string().url({
     message: "Please provide a valid url"
-  }),
+  }).optional(),
   location: z.string().optional(),
   portfolio: z.string().url({
     message: "Please provide a valid url"

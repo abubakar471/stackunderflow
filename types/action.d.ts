@@ -1,7 +1,7 @@
 interface SignInWithAuthParams {
   user: {
     email: string;
-    name: string;        
+    name: string;
     username: string;
     image: string;
   };
@@ -14,4 +14,10 @@ interface AuthCredentials {
   username: string;
   email: string;
   password: string;
+}
+
+interface CreateQuestionParams {
+  title: string;
+  content: string;
+  tags: string[];
 }

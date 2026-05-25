@@ -240,6 +240,7 @@ export async function getQuestion(
 export async function getQuestions(
   params: PaginationSearchParams
 ): Promise<ActionResponse<{ questions: Question[]; isNext: boolean }>> {
+
   const validationResult = await action({
     params,
     schema: PaginatedSearchParamsSchema,

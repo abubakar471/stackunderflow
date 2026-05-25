@@ -4,6 +4,7 @@ import Link from 'next/link';
 import React from 'react';
 import TagCard from './TagCard';
 import Metrics from '../Metrics';
+import { Tag } from '@/types/global';
 
 interface Props {
   question: Question;
@@ -28,30 +29,30 @@ const QuestionCard = ({
       </div>
 
       <div className='mt-3.5 flex w-full flex-wrap gap-2'>
-     {
-      tags.map((tag : Tag) => (
-        <TagCard key={tag._id} _id={tag._id} name={tag.name} compact />
-      ))
-     }
+        {
+          tags.map((tag: Tag) => (
+            <TagCard key={tag._id} _id={tag._id} name={tag.name} compact />
+          ))
+        }
       </div>
 
       <div className="flex-between mt-6 w-full flex-wrap gap-3">
-        <Metrics 
-        imgUrl={author.image}
-        alt={author.name}
-        value={author.name}
-        title={`- asked ${getTimeStamp(createdAt)}`}
-        href={ROUTES.PROFILE(author._id)}
-        textStyles="body-medium text-dark400_light700" 
-        isAuthor
+        <Metrics
+          imgUrl={author.image}
+          alt={author.name}
+          value={author.name}
+          title={`- asked ${getTimeStamp(createdAt)}`}
+          href={ROUTES.PROFILE(author._id)}
+          textStyles="body-medium text-dark400_light700"
+          isAuthor
         />
 
         <div className='flex items-center gap-3 max-sm:flex-wrap max-sm:justify-start'>
-          <Metrics imgUrl="/icons/like.svg" alt="like" value={upvotes} title="Votes" textStyles="small-medium text-dark400_light800"  />
+          <Metrics imgUrl="/icons/like.svg" alt="like" value={upvotes} title="Votes" textStyles="small-medium text-dark400_light800" />
 
-          <Metrics imgUrl="/icons/message.svg" alt="answers" value={String(answers)} title="Answers" textStyles="small-medium text-dark400_light800"  />
+          <Metrics imgUrl="/icons/message.svg" alt="answers" value={String(answers)} title="Answers" textStyles="small-medium text-dark400_light800" />
 
-          <Metrics imgUrl="/icons/eye.svg" alt="views" value={views} title="Views" textStyles="small-medium text-dark400_light800"  />
+          <Metrics imgUrl="/icons/eye.svg" alt="views" value={views} title="Views" textStyles="small-medium text-dark400_light800" />
         </div>
       </div>
     </div>

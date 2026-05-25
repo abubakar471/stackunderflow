@@ -87,6 +87,14 @@ export const UserSchema = z.object({
   reputation: z.number().optional()
 })
 
+export const EditQuestionSchema = AskQuestionSchema.extend({
+  questionId: z.string().min(1, {message: "Question ID is required"})
+})
+
+export const GetQuestionSchema = z.object({
+  questionId: z.string().min(1, {message: "Question ID is required"})
+})
+
 export const AccountSchema = z.object({
   userId: z.string(),
   name: z.string().min(1, "Name is required"),

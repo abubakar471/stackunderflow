@@ -2,12 +2,49 @@
 
 import { ActionResponse, ErrorResponse } from "@/types/global";
 import action from "../handlers/action";
-import { AskQuestionSchema } from "../validations";
+import {
+  AskQuestionSchema,
+  EditQuestionSchema,
+  GetQuestionSchema,
+} from "../validations";
 import handleError from "../handlers/error";
 import mongoose from "mongoose";
 import Question from "@/database/question.model";
-import Tag from "@/database/tag.model";
+import Tag, { ITagDoc } from "@/database/tag.model";
 import TagQuestion from "@/database/tag-question.model";
+
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const normalizeTags = (tags: string[]) => {
+  const normalizedTags: string[] = [];
+  const seenTags = new Set<string>();
+
+  for (const tag of tags) {
+    const trimmedTag = tag.trim();
+    const normalizedTag = trimmedTag.toLowerCase();
+
+    if (!trimmedTag || seenTags.has(normalizedTag)) {
+      continue;
+    }
+
+    seenTags.add(normalizedTag);
+    normalizedTags.push(trimmedTag);
+  }
+
+  return normalizedTags;
+};
+
+const findOrCreateTag = async (
+  tag: string,
+  session: mongoose.ClientSession
+) => {
+  return Tag.findOneAndUpdate(
+    { name: { $regex: new RegExp(`^${escapeRegExp(tag)}$`, "i") } },
+    { $setOnInsert: { name: tag }, $inc: { questions: 1 } },
+    { upsert: true, new: true, session }
+  );
+};
 
 export async function createQuestion(
   params: CreateQuestionParams
@@ -24,6 +61,7 @@ export async function createQuestion(
 
   const { title, content, tags } = validationResult.params!;
   const userId = validationResult?.session?.user?.id;
+  const normalizedTags = normalizeTags(tags);
 
   let session: mongoose.ClientSession | null = null;
 
@@ -31,6 +69,12 @@ export async function createQuestion(
     session = await mongoose.startSession();
 
     const transactionResult = await session.withTransaction(async () => {
+      const transactionSession = session;
+
+      if (!transactionSession) {
+        throw new Error("Transaction session is unavailable");
+      }
+
       const [question] = await Question.create(
         [
           {
@@ -39,7 +83,7 @@ export async function createQuestion(
             author: userId,
           },
         ],
-        { session }
+        { session: transactionSession }
       );
 
       if (!question) {
@@ -49,12 +93,12 @@ export async function createQuestion(
       const tagIds: mongoose.Types.ObjectId[] = [];
       const tagQuestionsDocuments = [];
 
-      for (const tag of tags) {
-        const existingTag = await Tag.findOneAndUpdate(
-          { name: { $regex: new RegExp(`^${tag}$`, "i") } },
-          { $setOnInsert: { name: tag }, $inc: { questions: 1 } },
-          { upsert: true, new: true, session }
-        );
+      for (const tag of normalizedTags) {
+        const existingTag = await findOrCreateTag(tag, transactionSession);
+
+        if (!existingTag) {
+          throw new Error("Failed to create tag");
+        }
 
         tagIds.push(existingTag._id);
         tagQuestionsDocuments.push({
@@ -63,12 +107,14 @@ export async function createQuestion(
         });
       }
 
-      await TagQuestion.insertMany(tagQuestionsDocuments, { session });
-      await Question.findByIdAndUpdate(
-        question._id,
-        { $push: { tags: { $each: tagIds } } },
-        { session }
-      );
+      if (tagQuestionsDocuments.length > 0) {
+        await TagQuestion.insertMany(tagQuestionsDocuments, {
+          session: transactionSession,
+        });
+      }
+
+      question.tags = tagIds;
+      await question.save({ session: transactionSession });
 
       return { success: true, data: JSON.parse(JSON.stringify(question)) };
     });
@@ -79,5 +125,152 @@ export async function createQuestion(
     return handleError(error) as ErrorResponse;
   } finally {
     await session?.endSession();
+  }
+}
+
+export async function editQuestion(
+  params: EditQuestionParams
+): Promise<ActionResponse<Question>> {
+  const validationResult = await action({
+    params,
+    schema: EditQuestionSchema,
+    authorize: true,
+  });
+
+  if (validationResult instanceof Error) {
+    return handleError(validationResult) as ErrorResponse;
+  }
+
+  const { title, content, tags, questionId } = validationResult.params!;
+  const userId = validationResult?.session?.user?.id;
+  const normalizedTags = normalizeTags(tags);
+
+  let session: mongoose.ClientSession | null = null;
+
+  try {
+    session = await mongoose.startSession();
+    const transactionResult = await session.withTransaction(async () => {
+      const transactionSession = session;
+
+      if (!transactionSession) {
+        throw new Error("Transaction session is unavailable");
+      }
+
+      const question = await Question.findById(questionId).populate("tags");
+
+      if (!question) {
+        throw new Error("Question not found");
+      }
+
+      if (question.author.toString() !== userId) {
+        throw new Error("Unauthorized");
+      }
+
+      if (question.title !== title || question.content !== content) {
+        question.title = title;
+        question.content = content;
+        await question.save({ session: transactionSession });
+      }
+
+      const existingTags = question.tags as unknown as ITagDoc[];
+      const existingTagNameSet = new Set(
+        existingTags.map((tag) => tag.name.toLowerCase())
+      );
+      const incomingTagNameSet = new Set(
+        normalizedTags.map((tag) => tag.toLowerCase())
+      );
+
+      const tagsToAdd = normalizedTags.filter(
+        (tag) => !existingTagNameSet.has(tag.toLowerCase())
+      );
+
+      const tagsToRemove = existingTags.filter(
+        (tag) => !incomingTagNameSet.has(tag.name.toLowerCase())
+      );
+
+      const newTagDocuments = [];
+      const tagIdsToAdd: mongoose.Types.ObjectId[] = [];
+
+      if (tagsToAdd.length > 0) {
+        for (const tag of tagsToAdd) {
+          const existingTag = await findOrCreateTag(tag, transactionSession);
+
+          if (existingTag) {
+            newTagDocuments.push({
+              tag: existingTag._id,
+              question: questionId,
+            });
+            tagIdsToAdd.push(existingTag._id);
+          }
+        }
+      }
+
+      if (tagsToRemove.length > 0) {
+        const tagIdsToRemove = tagsToRemove.map((tag: ITagDoc) => tag._id);
+
+        await Tag.updateMany(
+          { _id: { $in: tagIdsToRemove } },
+          { $inc: { questions: -1 } },
+          { session: transactionSession }
+        );
+        await TagQuestion.deleteMany(
+          { tag: { $in: tagIdsToRemove }, question: questionId },
+          { session: transactionSession }
+        );
+      }
+
+      if (newTagDocuments.length > 0) {
+        await TagQuestion.insertMany(newTagDocuments, {
+          session: transactionSession,
+        });
+      }
+
+      const tagIdsToRemove = new Set(
+        tagsToRemove.map((tag: ITagDoc) => tag._id.toString())
+      );
+      const remainingTagIds = existingTags
+        .map((tag) => tag._id)
+        .filter((tagId) => !tagIdsToRemove.has(tagId.toString()));
+
+      question.tags = [...remainingTagIds, ...tagIdsToAdd];
+
+      await question.save({ session: transactionSession });
+
+      return { success: true, data: JSON.parse(JSON.stringify(question)) };
+    });
+
+    return transactionResult as ActionResponse<Question>;
+  } catch (error) {
+    return handleError(error) as ErrorResponse;
+  } finally {
+    await session?.endSession();
+  }
+}
+
+export async function getQuestion(
+  params: GetQuestionsParams
+): Promise<ActionResponse<Question>> {
+  const validationResult = await action({
+    params,
+    schema: GetQuestionSchema,
+    authorize: true,
+  });
+
+  if (validationResult instanceof Error) {
+    return handleError(validationResult) as ErrorResponse;
+  }
+
+  const { questionId } = validationResult.params!;
+
+  try {
+    const question = await Question.findById(questionId).populate("tags");
+
+    if (!question) {
+      throw new Error("Question not found");
+    }
+
+    return { success: true, data: JSON.parse(JSON.stringify(question)) };
+  } catch (error) {
+    return handleError(error) as ErrorResponse;
   }
 }

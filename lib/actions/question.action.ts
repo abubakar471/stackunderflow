@@ -14,39 +14,6 @@ import Question, { IQuestionDoc } from "@/database/question.model";
 import Tag, { ITagDoc } from "@/database/tag.model";
 import TagQuestion from "@/database/tag-question.model";
 
-const escapeRegExp = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const normalizeTags = (tags: string[]) => {
-  const normalizedTags: string[] = [];
-  const seenTags = new Set<string>();
-
-  for (const tag of tags) {
-    const trimmedTag = tag.trim();
-    const normalizedTag = trimmedTag.toLowerCase();
-
-    if (!trimmedTag || seenTags.has(normalizedTag)) {
-      continue;
-    }
-
-    seenTags.add(normalizedTag);
-    normalizedTags.push(trimmedTag);
-  }
-
-  return normalizedTags;
-};
-
-const findOrCreateTag = async (
-  tag: string,
-  session: mongoose.ClientSession
-) => {
-  return Tag.findOneAndUpdate(
-    { name: { $regex: new RegExp(`^${escapeRegExp(tag)}$`, "i") } },
-    { $setOnInsert: { name: tag }, $inc: { questions: 1 } },
-    { upsert: true, new: true, session }
-  );
-};
-
 export async function createQuestion(
   params: CreateQuestionParams
 ): Promise<ActionResponse<Question>> {
@@ -62,7 +29,6 @@ export async function createQuestion(
 
   const { title, content, tags } = validationResult.params!;
   const userId = validationResult?.session?.user?.id;
-  const normalizedTags = normalizeTags(tags);
 
   let session: mongoose.ClientSession | null = null;
 
@@ -92,30 +58,30 @@ export async function createQuestion(
       }
 
       const tagIds: mongoose.Types.ObjectId[] = [];
-      const tagQuestionsDocuments = [];
+    const tagQuestionDocuments = [];
 
-      for (const tag of normalizedTags) {
-        const existingTag = await findOrCreateTag(tag, transactionSession);
+    for (const tag of tags) {
+      const existingTag = await Tag.findOneAndUpdate(
+        { name: { $regex: new RegExp(`^${tag}$`, "i") } },
+        { $setOnInsert: { name: tag }, $inc: { questions: 1 } },
+        { upsert: true, new: true, session }
+      );
 
-        if (!existingTag) {
-          throw new Error("Failed to create tag");
-        }
+      tagIds.push(existingTag._id);
+      tagQuestionDocuments.push({
+        tag: existingTag._id,
+        question: question._id,
+      });
+    }
 
-        tagIds.push(existingTag._id);
-        tagQuestionsDocuments.push({
-          tag: existingTag._id,
-          question: question._id,
-        });
-      }
+    await TagQuestion.insertMany(tagQuestionDocuments, { session });
 
-      if (tagQuestionsDocuments.length > 0) {
-        await TagQuestion.insertMany(tagQuestionsDocuments, {
-          session: transactionSession,
-        });
-      }
+    await Question.findByIdAndUpdate(
+      question._id,
+      { $push: { tags: { $each: tagIds } } },
+      { session }
+    );
 
-      question.tags = tagIds;
-      await question.save({ session: transactionSession });
 
       return { success: true, data: JSON.parse(JSON.stringify(question)) };
     });
@@ -144,7 +110,6 @@ export async function editQuestion(
 
   const { title, content, tags, questionId } = validationResult.params!;
   const userId = validationResult?.session?.user?.id;
-  const normalizedTags = normalizeTags(tags);
 
   let session: mongoose.ClientSession | null = null;
 
@@ -158,84 +123,80 @@ export async function editQuestion(
       }
 
       const question = await Question.findById(questionId).populate("tags");
-
-      if (!question) {
-        throw new Error("Question not found");
-      }
+      if (!question) throw new Error("Question not found");
 
       if (question.author.toString() !== userId) {
-        throw new Error("Unauthorized");
+        throw new Error("You are not authorized to edit this question");
       }
 
       if (question.title !== title || question.content !== content) {
         question.title = title;
         question.content = content;
-        await question.save({ session: transactionSession });
+        await question.save({ session });
       }
 
-      const existingTags = question.tags as unknown as ITagDoc[];
-      const existingTagNameSet = new Set(
-        existingTags.map((tag) => tag.name.toLowerCase())
-      );
-      const incomingTagNameSet = new Set(
-        normalizedTags.map((tag) => tag.toLowerCase())
-      );
-
-      const tagsToAdd = normalizedTags.filter(
-        (tag) => !existingTagNameSet.has(tag.toLowerCase())
+      // Determine tags to add and remove
+      const tagsToAdd = tags.filter(
+        (tag) =>
+          !question.tags.some(
+            (t: ITagDoc) => t.name.toLowerCase() === tag.toLowerCase()
+          )
       );
 
-      const tagsToRemove = existingTags.filter(
-        (tag) => !incomingTagNameSet.has(tag.name.toLowerCase())
+      const tagsToRemove = question.tags.filter(
+        (tag: ITagDoc) =>
+          !tags.some((t) => t.toLowerCase() === tag.name.toLowerCase())
       );
 
+      // Add new tags
       const newTagDocuments = [];
-      const tagIdsToAdd: mongoose.Types.ObjectId[] = [];
-
       if (tagsToAdd.length > 0) {
         for (const tag of tagsToAdd) {
-          const existingTag = await findOrCreateTag(tag, transactionSession);
+          const newTag = await Tag.findOneAndUpdate(
+            { name: { $regex: `^${tag}$`, $options: "i" } },
+            { $setOnInsert: { name: tag }, $inc: { questions: 1 } },
+            { upsert: true, new: true, session: session ?? undefined }
+          );
 
-          if (existingTag) {
-            newTagDocuments.push({
-              tag: existingTag._id,
-              question: questionId,
-            });
-            tagIdsToAdd.push(existingTag._id);
+          if (newTag) {
+            newTagDocuments.push({ tag: newTag._id, question: questionId });
+            question.tags.push(newTag._id);
           }
         }
       }
 
+      // Remove tags
       if (tagsToRemove.length > 0) {
         const tagIdsToRemove = tagsToRemove.map((tag: ITagDoc) => tag._id);
 
         await Tag.updateMany(
           { _id: { $in: tagIdsToRemove } },
           { $inc: { questions: -1 } },
-          { session: transactionSession }
+          { session: session ?? undefined }
         );
+
         await TagQuestion.deleteMany(
           { tag: { $in: tagIdsToRemove }, question: questionId },
-          { session: transactionSession }
+          { session: session ?? undefined }
+        );
+
+        question.tags = question.tags.filter(
+          (tag: mongoose.Types.ObjectId) =>
+            !tagIdsToRemove.some((id: mongoose.Types.ObjectId) =>
+              id.equals(tag._id)
+            )
         );
       }
 
+      // Insert new TagQuestion documents
       if (newTagDocuments.length > 0) {
         await TagQuestion.insertMany(newTagDocuments, {
-          session: transactionSession,
+          session: session ?? undefined,
         });
       }
 
-      const tagIdsToRemove = new Set(
-        tagsToRemove.map((tag: ITagDoc) => tag._id.toString())
-      );
-      const remainingTagIds = existingTags
-        .map((tag) => tag._id)
-        .filter((tagId) => !tagIdsToRemove.has(tagId.toString()));
-
-      question.tags = [...remainingTagIds, ...tagIdsToAdd];
-
-      await question.save({ session: transactionSession });
+      // Save the updated question
+      await question.save({ session: session ?? undefined });
 
       return { success: true, data: JSON.parse(JSON.stringify(question)) };
     });
